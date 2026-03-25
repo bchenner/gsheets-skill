@@ -15,6 +15,8 @@ DATA_DIR = SKILL_DIR / "data"
 CONFIG_FILE = DATA_DIR / "config.json"
 
 DEFAULT_KEY_LOCATIONS = [
+    os.environ.get("GSHEETS_SERVICE_ACCOUNT_KEY", ""),
+    str(Path.home() / "Downloads" / "crypto-quasar-489706-a8-9530762b9b2d.json"),
     "C:/Users/Privat/Downloads/crypto-quasar-489706-a8-9530762b9b2d.json",
 ]
 
@@ -45,6 +47,8 @@ def find_key_path():
 
     # Search default locations
     for loc in DEFAULT_KEY_LOCATIONS:
+        if not loc:
+            continue
         if Path(loc).exists():
             # Auto-save to config
             config["service_account_key"] = loc

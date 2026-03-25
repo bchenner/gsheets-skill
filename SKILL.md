@@ -1,6 +1,8 @@
 ---
 name: gsheets
-description: Read, write, and manage Google Sheets directly from Claude Code. Service account auth, table formatting, CSV import/export, formatting, search.
+description: "Use when someone asks to read a Google Sheet, write to a spreadsheet, update sheet data, export to Google Sheets, import from a spreadsheet, format cells, search a sheet, or manage spreadsheet tabs. Also trigger when a Google Sheets URL or spreadsheet ID is mentioned."
+disable-model-invocation: true
+argument-hint: "[command] [options]"
 ---
 
 # Google Sheets Skill
@@ -18,45 +20,71 @@ Trigger when user:
 
 ## Critical: Always Use run.py Wrapper
 
-NEVER call scripts directly. ALWAYS use `python scripts/run.py [script]`:
+**NEVER call scripts directly. ALWAYS use `python scripts/run.py [script]`:**
+
+All commands must be run from the skill directory. Set `SKILL_DIR` first:
 
 ```bash
-# All commands must be run from the skill directory:
-cd C:\Users\Privat\.claude\skills\gsheets
+SKILL_DIR="$HOME/.claude/skills/gsheets"
+cd "$SKILL_DIR"
+```
 
-# Auth
+### Auth
+```bash
 python scripts/run.py auth.py status
-python scripts/run.py auth.py set-key C:/path/to/key.json
+python scripts/run.py auth.py set-key /path/to/key.json
+```
 
-# Read data (default: formatted table)
+### Read Data
+```bash
+# Default: formatted table
 python scripts/run.py gsheets.py read --spreadsheet-id ID --range "Sheet1!A1:Z100"
+# JSON output
 python scripts/run.py gsheets.py read --spreadsheet-id ID --range "Sheet1!A1:Z100" --json
+# CSV output
 python scripts/run.py gsheets.py read --spreadsheet-id ID --range "Sheet1!A1:Z100" --csv
+```
 
-# Write data
+### Write Data
+```bash
+# From JSON array of arrays
 python scripts/run.py gsheets.py write --spreadsheet-id ID --range "Sheet1!A1" --values '[["a","b"],["c","d"]]'
+# From CSV file
 python scripts/run.py gsheets.py write --spreadsheet-id ID --range "Sheet1!A1" --csv-file /path/to/data.csv
-python scripts/run.py gsheets.py write --spreadsheet-id ID --range "Sheet1!A1" --values '[["formula"]]' --value-input-option USER_ENTERED
+# With formula support
+python scripts/run.py gsheets.py write --spreadsheet-id ID --range "Sheet1!A1" --values '[["=SUM(B2:B10)"]]' --value-input-option USER_ENTERED
+```
 
-# Append rows
+### Append Rows
+```bash
 python scripts/run.py gsheets.py append --spreadsheet-id ID --sheet-name "Sheet1" --values '[["new","row"]]'
+```
 
-# Sheet management
+### Sheet Management
+```bash
 python scripts/run.py gsheets.py list-sheets --spreadsheet-id ID
 python scripts/run.py gsheets.py create-sheet --spreadsheet-id ID --sheet-name "New Tab"
 python scripts/run.py gsheets.py info --spreadsheet-id ID
+```
 
-# Clear data
+### Clear Data
+```bash
 python scripts/run.py gsheets.py clear --spreadsheet-id ID --range "Sheet1!A1:Z100"
+```
 
-# Format cells
+### Format Cells
+```bash
 python scripts/run.py gsheets.py format --spreadsheet-id ID --range "Sheet1!A1:Z1" --bold --bg-color "#333333" --text-color "#FFFFFF"
 python scripts/run.py gsheets.py format --spreadsheet-id ID --range "Sheet1!A1:Z1" --italic --font-size 14 --h-align center
+```
 
-# Search
+### Search
+```bash
 python scripts/run.py gsheets.py find --spreadsheet-id ID --sheet-name "Sheet1" --query "search term"
+```
 
-# Get URL
+### Get URL
+```bash
 python scripts/run.py gsheets.py get-url --spreadsheet-id ID
 ```
 
@@ -70,7 +98,7 @@ python scripts/run.py gsheets.py get-url --spreadsheet-id ID
 
 ### Step 1: Check Auth
 ```bash
-cd C:\Users\Privat\.claude\skills\gsheets
+cd "$HOME/.claude/skills/gsheets"
 python scripts/run.py auth.py status
 ```
 If auth is not configured, the status command shows the service account email. The user must share their spreadsheet with that email address.
@@ -100,7 +128,17 @@ python scripts/run.py gsheets.py find --spreadsheet-id ID --sheet-name "Sheet1" 
 ```
 Returns cell references and values for all matches.
 
+## Error Handling
+
+| Error | What to Do |
+|-------|-----------|
+| `Permission denied` | Share the spreadsheet with the service account email shown in the error |
+| `Spreadsheet not found` | Check the spreadsheet ID (between `/d/` and `/edit` in the URL) |
+| `Unable to parse range` | Use `list-sheets` to check tab names. Format: `"SheetName!A1:Z100"` |
+| `Auth not configured` | Run `python scripts/run.py auth.py status` and follow the setup instructions |
+
 ## Tips
+
 - **Spreadsheet ID** is the long string in the Google Sheets URL between `/d/` and `/edit`
 - **Range format**: `"SheetName!A1:Z100"` or just `"A1:Z100"` for the first sheet
 - **Values** for write/append must be JSON array of arrays
@@ -109,3 +147,10 @@ Returns cell references and values for all matches.
 - Use `info` for a quick overview of the spreadsheet structure
 - For formulas, use `--value-input-option USER_ENTERED`
 - The skill auto-creates its virtual environment on first run
+
+## Security
+
+- Service account key is stored locally in `data/config.json` (path reference only, not the key itself)
+- Key file and data directory are excluded from git via `.gitignore`
+- The service account has access ONLY to spreadsheets explicitly shared with it
+- No data is sent to any endpoint other than `googleapis.com`
